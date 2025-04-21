@@ -1,3 +1,4 @@
+import time
 from typing import Optional, List
 
 import fastapi
@@ -17,10 +18,15 @@ def create_product(name: str = Form(...)):
     products.append(name)
     return products
 
+async def time_consuming_functionality():
+    time.sleep(5)
+    return 'ok'
+
 
 
 @router.get('/all')
-def get_all_products():
+async def get_all_products():
+    await time_consuming_functionality()
     data = " ".join(products)
     response = Response(content=data)
     response.set_cookie(key="test_cookie", value="test_value")
