@@ -1,8 +1,9 @@
 import time
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, HTMLResponse
 from starlette.middleware.cors import CORSMiddleware
+from fastapi.websockets import WebSocket
 
 from auth import authentication
 from db import models
@@ -11,6 +12,7 @@ from exceptions import StoryException
 from router import blog_get, blog_post, user, article, product, file, template
 from fastapi.staticfiles import StaticFiles
 from custom_logger import setup_logging, logger
+from client import html
 
 setup_logging()
 
@@ -39,6 +41,32 @@ def story_exception_handler(request: Request, exc: StoryException):
         content={"detail": exc.name}
 
     )
+
+@app.get("/")
+async def get():
+    return HTMLResponse(html)
+
+clients = []
+
+
+@app.websocket("/chat")
+async def websocket_endpoint(websocket: WebSocket):
+    # Accept the incoming WebSocket connection
+    await websocket.accept()
+
+    # Add the connected client to the list of active clients
+    clients.append(websocket)
+
+    # Continuously listen for incoming messages
+    while True:
+        # Wait for a text message from the client
+        data = await websocket.receive_text()
+
+        # Broadcast the received message to all connected clients
+        for client in clients:
+            await client.send_text(data)
+
+
 """
 @app.exception_handler(HTTPException)
 def custom_handler(request: Request, exc: StoryException):
