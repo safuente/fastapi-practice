@@ -1,3 +1,5 @@
+import time
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.middleware.cors import CORSMiddleware
@@ -8,6 +10,9 @@ from db.database import engine
 from exceptions import StoryException
 from router import blog_get, blog_post, user, article, product, file, template
 from fastapi.staticfiles import StaticFiles
+from custom_logger import setup_logging, logger
+
+setup_logging()
 
 app = FastAPI()
 app.include_router(blog_get.router)
@@ -23,6 +28,7 @@ app.include_router(template.router)
 
 @app.get('/hello')
 def index():
+    logger.info("hello endpoint")
     return {'message': 'Hello world!'}
 
 
@@ -39,6 +45,17 @@ def custom_handler(request: Request, exc: StoryException):
     return PlainTextResponse(str(exc), status_code=400)
 """
 models.Base.metadata.create_all(engine)
+
+
+@app.middleware("http")
+async def add_middleware(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    response.headers['duration'] = str(duration)
+    return response
+
+
 
 origins = [
     "http://localhost:3000/"
